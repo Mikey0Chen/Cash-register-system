@@ -1,0 +1,21 @@
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Build artifacts
+backend/target/
+frontend/dist/
+frontend/node_modules/
+
+# Runtime and local data
+data/
+logs/
+*.log
+
+# Local environment files
+.env
+.env.*
+
+# Tool metadata
+.omc/
