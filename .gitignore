@@ -16,6 +16,7 @@ logs/
 # Local environment files
 .env
 .env.*
+!.env.example
 
 # Tool metadata
 .omc/

@@ -4,9 +4,9 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/cocktail_bar?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: root123
+    url: ${DB_URL:jdbc:mysql://localhost:3306/cocktail_bar?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:change-me}
     hikari:
       maximum-pool-size: 5
       minimum-idle: 2
@@ -15,11 +15,11 @@ spring:
       max-lifetime: 1800000
 
   redis:
-    host: localhost
-    port: 6379
-    password: redis123
-    database: 0
-    timeout: 3000ms
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    timeout: ${REDIS_TIMEOUT:3000ms}
     lettuce:
       pool:
         max-active: 4
@@ -59,8 +59,8 @@ mybatis-plus:
 
 # JWT 配置
 jwt:
-  secret: cocktail-bar-system-secret-key-2024
-  expiration: 86400000  # 24小时
+  secret: ${JWT_SECRET:replace-this-in-production}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 # 日志配置
 logging:

@@ -1,16 +1,13 @@
-version: '3.8'
-
 services:
-  # MySQL 数据库
   mysql:
     image: mysql:8.0
     container_name: cocktail-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: cocktail_bar
-      MYSQL_USER: cocktail
-      MYSQL_PASSWORD: cocktail123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       TZ: Asia/Shanghai
     ports:
       - "3306:3306"
@@ -25,7 +22,6 @@ services:
     networks:
       - cocktail-network
 
-  # Redis 缓存
   redis:
     image: redis:7-alpine
     container_name: cocktail-redis
@@ -34,11 +30,12 @@ services:
       - "6379:6379"
     volumes:
       - ./data/redis:/data
-    command: redis-server --appendonly yes --requirepass redis123
+    command: sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"; else redis-server --appendonly yes; fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     networks:
       - cocktail-network
 
-  # 后端服务
   backend:
     build:
       context: ./backend
@@ -48,13 +45,13 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cocktail_bar?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-      SPRING_DATASOURCE_USERNAME: cocktail
-      SPRING_DATASOURCE_PASSWORD: cocktail123
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: 6379
-      SPRING_REDIS_PASSWORD: redis123
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET}
       TZ: Asia/Shanghai
     depends_on:
       - mysql
@@ -67,7 +64,6 @@ services:
       timeout: 10s
       retries: 3
 
-  # 前端服务
   frontend:
     build:
       context: ./frontend
@@ -76,8 +72,6 @@ services:
     restart: always
     ports:
       - "80:80"
-    volumes:
-      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - backend
     networks:
@@ -86,7 +80,3 @@ services:
 networks:
   cocktail-network:
     driver: bridge
-
-volumes:
-  mysql-data:
-  redis-data:
