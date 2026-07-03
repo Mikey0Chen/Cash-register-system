@@ -37,7 +37,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  document.title = to.meta.title ? `${to.meta.title} - 鸡尾酒收银系统` : '鸡尾酒收银系统'
+  document.title = to.meta.title ? `${to.meta.title} - Cash Register System` : 'Cash Register System'
   next()
 })
 

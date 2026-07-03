@@ -1,7 +1,7 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: cocktail-mysql
+    container_name: cash-register-mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -20,11 +20,11 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
     networks:
-      - cocktail-network
+      - cash-register-network
 
   redis:
     image: redis:7-alpine
-    container_name: cocktail-redis
+    container_name: cash-register-redis
     restart: always
     ports:
       - "6379:6379"
@@ -34,13 +34,13 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     networks:
-      - cocktail-network
+      - cash-register-network
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: cocktail-backend
+    container_name: cash-register-backend
     restart: always
     ports:
       - "8080:8080"
@@ -57,7 +57,7 @@ services:
       - mysql
       - redis
     networks:
-      - cocktail-network
+      - cash-register-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
@@ -68,15 +68,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: cocktail-frontend
+    container_name: cash-register-frontend
     restart: always
     ports:
       - "80:80"
     depends_on:
       - backend
     networks:
-      - cocktail-network
+      - cash-register-network
 
 networks:
-  cocktail-network:
+  cash-register-network:
     driver: bridge

@@ -12,11 +12,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.cocktail</groupId>
-    <artifactId>cocktail-bar-backend</artifactId>
+    <groupId>com.cashregister</groupId>
+    <artifactId>cash-register-backend</artifactId>
     <version>1.0.0</version>
-    <name>Cocktail Bar System Backend</name>
-    <description>鸡尾酒收银系统后端服务</description>
+    <name>Cash Register System Backend</name>
+    <description>酒吧收银系统后端服务</description>
 
     <properties>
         <java.version>11</java.version>

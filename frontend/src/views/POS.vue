@@ -3,7 +3,7 @@
     <!-- 顶部导航栏 -->
     <div class="pos-header">
       <div class="header-left">
-        <h1>🍸 鸡尾酒收银系统</h1>
+        <h1>Cash Register System</h1>
       </div>
       <div class="header-right">
         <el-button @click="$router.push('/financial')">财务统计</el-button>

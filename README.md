@@ -1,6 +1,6 @@
-# Cocktail Bar System
+# Cash Register System
 
-鸡尾酒酒吧收银与库存管理系统，包含 Vue 3 前端和 Spring Boot 后端。
+面向酒吧场景的收银与库存管理系统，包含 Vue 3 前端和 Spring Boot 后端。
 
 ## Stack
 

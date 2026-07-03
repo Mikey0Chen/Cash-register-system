@@ -1,10 +1,10 @@
 spring:
   application:
-    name: cocktail-bar-backend
+    name: cash-register-backend
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL:jdbc:mysql://localhost:3306/cocktail_bar?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/cash_register?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:change-me}
     hikari:
@@ -44,7 +44,7 @@ server:
 
 mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml
-  type-aliases-package: com.cocktail.entity
+  type-aliases-package: com.cashregister.entity
   configuration:
     map-underscore-to-camel-case: true
     cache-enabled: true
@@ -66,7 +66,7 @@ jwt:
 logging:
   level:
     root: WARN
-    com.cocktail: INFO
+    com.cashregister: INFO
   pattern:
     console: "%d{HH:mm:ss} %-5level %logger{36} - %msg%n"
 
