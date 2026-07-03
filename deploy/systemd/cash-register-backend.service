@@ -1,0 +1,17 @@
+[Unit]
+Description=Cash Register System Backend
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/cash-register-system/backend
+EnvironmentFile=/etc/cash-register-system/cash-register.env
+ExecStart=/usr/bin/java -jar /srv/cash-register-system/backend/target/cash-register-backend.jar
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
