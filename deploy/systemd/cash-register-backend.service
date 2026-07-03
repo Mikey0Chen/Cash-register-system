@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-User=www-data
-Group=www-data
+User=cashregister
+Group=cashregister
 WorkingDirectory=/srv/cash-register-system/backend
 EnvironmentFile=/etc/cash-register-system/cash-register.env
 ExecStart=/usr/bin/java -jar /srv/cash-register-system/backend/target/cash-register-backend.jar
