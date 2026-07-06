@@ -140,6 +140,52 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
+Alternative: publish on the same server IP with a different Nginx port:
+
+- Keep the existing site unchanged
+- Create a separate vhost such as `/usr/local/nginx/conf/vhost/cash-register-system.conf`
+- Let the cash register system listen on `8083`
+- Proxy `/api/` to `http://127.0.0.1:8080/`
+
+Example:
+
+```nginx
+server {
+    listen 8083;
+    server_name 47.94.123.202 127.0.0.1 localhost cash-register-system.local;
+    access_log /usr/local/nginx/logs/cash-register-system.log;
+
+    location / {
+        root   /usr/local/nginx/html/cash-register-system;
+        index  index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Publish static files to the custom Nginx root:
+
+```bash
+sudo mkdir -p /usr/local/nginx/html/cash-register-system
+sudo rsync -av --delete frontend/dist/ /usr/local/nginx/html/cash-register-system/
+sudo /usr/local/nginx/sbin/nginx -t
+sudo /usr/local/nginx/sbin/nginx -s reload
+```
+
+Access example:
+
+- Frontend: `http://47.94.123.202:8083/`
+- Backend health check: `http://47.94.123.202:8083/api/actuator/health`
+
 Backend service:
 
 - Copy `deploy/systemd/cash-register-backend.service` to `/etc/systemd/system/`
