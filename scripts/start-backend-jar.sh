@@ -6,8 +6,10 @@ ENV_FILE="${LOCAL_ENV_FILE:-$ROOT_DIR/scripts/local.env}"
 JAR_PATH="$ROOT_DIR/backend/target/cash-register-backend.jar"
 
 if [[ -f "$ENV_FILE" ]]; then
-  # shellcheck disable=SC1090
-  set -a && source "$ENV_FILE" && set +a
+  while IFS='=' read -r key value; do
+    [[ -z "$key" || "$key" =~ ^# ]] && continue
+    export "$key=$value"
+  done < "$ENV_FILE"
 fi
 
 if [[ ! -f "$JAR_PATH" ]]; then
