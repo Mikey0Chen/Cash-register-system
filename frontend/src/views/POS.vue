@@ -6,9 +6,9 @@
         <h1>Cash Register System</h1>
       </div>
       <div class="header-right">
-        <el-button @click="$router.push('/financial')">财务统计</el-button>
-        <el-button @click="$router.push('/recipe')">配方管理</el-button>
-        <el-button @click="$router.push('/ingredient')">库存管理</el-button>
+        <el-button @click="goTo('/financial')">财务统计</el-button>
+        <el-button @click="goTo('/recipe')">配方管理</el-button>
+        <el-button @click="goTo('/ingredient')">库存管理</el-button>
       </div>
     </div>
 
@@ -34,7 +34,6 @@
             v-model="searchKeyword"
             placeholder="搜索鸡尾酒..."
             clearable
-            @input="loadRecipes"
           >
             <template #prefix>
               <el-icon><Search /></el-icon>
@@ -43,7 +42,7 @@
         </div>
 
         <!-- 商品列表 -->
-        <div class="product-list">
+        <div v-loading="recipesLoading" class="product-list">
           <div
             v-for="recipe in recipes"
             :key="recipe.id"
@@ -57,7 +56,7 @@
             <div class="product-info">
               <div class="product-name">{{ recipe.name }}</div>
               <div class="product-name-en">{{ recipe.nameEn }}</div>
-              <div class="product-price">¥{{ recipe.price }}</div>
+              <div class="product-price">¥{{ formatCurrency(recipe.price) }}</div>
             </div>
           </div>
         </div>
@@ -67,7 +66,7 @@
       <div class="cart-area">
         <div class="cart-header">
           <h3>购物车</h3>
-          <el-button type="danger" size="small" @click="clearCart" v-if="cartItems.length > 0">
+          <el-button type="danger" size="small" @click="handleClearCart" v-if="cartItems.length > 0">
             清空
           </el-button>
         </div>
@@ -88,18 +87,18 @@
                   :min="1"
                   :max="99"
                   size="small"
-                  @change="updateCart"
+                  @change="(value) => handleQuantityChange(index, value)"
                 />
                 <el-button
                   type="danger"
                   size="small"
-                  icon="Delete"
+                  :icon="Delete"
                   circle
-                  @click="removeFromCart(index)"
+                  @click="handleRemoveFromCart(index)"
                 />
               </div>
               <div class="item-total">
-                小计: ¥{{ (item.price * item.quantity).toFixed(2) }}
+                小计: ¥{{ formatCurrency(item.price * item.quantity) }}
               </div>
             </div>
           </div>
@@ -108,20 +107,20 @@
         <div class="cart-summary">
           <div class="summary-row">
             <span>商品总额：</span>
-            <span class="amount">¥{{ totalAmount.toFixed(2) }}</span>
+            <span class="amount">¥{{ formatCurrency(totalAmount) }}</span>
           </div>
           <div class="summary-row">
             <span>优惠金额：</span>
-            <span class="amount discount">-¥{{ discountAmount.toFixed(2) }}</span>
+            <span class="amount discount">-¥{{ formatCurrency(discountAmount) }}</span>
           </div>
           <div class="summary-row total">
             <span>实付金额：</span>
-            <span class="amount">¥{{ actualAmount.toFixed(2) }}</span>
+            <span class="amount">¥{{ formatCurrency(actualAmount) }}</span>
           </div>
         </div>
 
         <div class="cart-actions">
-          <el-button type="success" size="large" @click="checkout" :disabled="cartItems.length === 0">
+          <el-button type="success" size="large" @click="openCheckout" :disabled="cartItems.length === 0">
             结账
           </el-button>
         </div>
@@ -130,57 +129,67 @@
 
     <!-- 结账对话框 -->
     <el-dialog v-model="checkoutDialogVisible" title="结账" width="500px">
-      <el-form :model="checkoutForm" label-width="100px">
-        <el-form-item label="支付方式">
+      <el-form ref="checkoutFormRef" :model="checkoutForm" :rules="checkoutRules" label-width="100px">
+        <el-form-item label="支付方式" prop="payType">
           <el-radio-group v-model="checkoutForm.payType">
-            <el-radio :label="1">现金</el-radio>
-            <el-radio :label="2">微信</el-radio>
-            <el-radio :label="3">支付宝</el-radio>
-            <el-radio :label="4">会员卡</el-radio>
+            <el-radio
+              v-for="option in paymentOptions"
+              :key="option.value"
+              :label="option.value"
+            >
+              {{ option.label }}
+            </el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="实付金额">
-          <el-input v-model="actualAmount" disabled>
+          <el-input :model-value="formatCurrency(actualAmount)" disabled>
             <template #prepend>¥</template>
           </el-input>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="checkoutDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmCheckout">确认支付</el-button>
+        <el-button type="primary" :loading="checkoutSubmitting" @click="confirmCheckout">确认支付</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Delete, Search } from '@element-plus/icons-vue'
 import { getRecipePage } from '@/api/recipe'
-import request from '@/utils/request'
+import { createOrder } from '@/api/order'
+import { PAYMENT_OPTIONS, RECIPE_CATEGORIES } from '@/constants/pos'
+import { useCartStore } from '@/stores/cart'
+import { debounce } from '@/utils/debounce'
+import { formatCurrency } from '@/utils/format'
 
-// 分类列表
-const categories = [
-  { label: '全部', value: '' },
-  { label: '朗姆基酒', value: '朗姆基酒' },
-  { label: '伏特加基酒', value: '伏特加基酒' },
-  { label: '威士忌基酒', value: '威士忌基酒' },
-  { label: '龙舌兰基酒', value: '龙舌兰基酒' },
-  { label: '无酒精', value: '无酒精' }
-]
-
+const router = useRouter()
+const cartStore = useCartStore()
+const { items: cartItems, totalAmount } = storeToRefs(cartStore)
+const categories = RECIPE_CATEGORIES
+const paymentOptions = PAYMENT_OPTIONS
 const currentCategory = ref('')
 const searchKeyword = ref('')
 const recipes = ref([])
-const cartItems = ref([])
 const checkoutDialogVisible = ref(false)
-const paymentMethod = ref(1)  // 默认现金支付
+const recipesLoading = ref(false)
+const checkoutSubmitting = ref(false)
+const checkoutFormRef = ref()
 const checkoutForm = ref({
   payType: 1
 })
+const checkoutRules = {
+  payType: [{ required: true, message: '请选择支付方式', trigger: 'change' }]
+}
 
 // 加载配方列表
 const loadRecipes = async () => {
+  recipesLoading.value = true
   try {
     const res = await getRecipePage({
       current: 1,
@@ -191,49 +200,34 @@ const loadRecipes = async () => {
     recipes.value = res.data.records
   } catch (error) {
     ElMessage.error('加载配方失败')
+  } finally {
+    recipesLoading.value = false
   }
 }
 
-// 监听分类变化
-watch(currentCategory, () => {
-  loadRecipes()
-})
+const debouncedLoadRecipes = debounce(loadRecipes, 300)
 
-// 添加到购物车
+watch([currentCategory, searchKeyword], () => {
+  debouncedLoadRecipes()
+}, { immediate: true })
+
 const addToCart = (recipe) => {
-  const existItem = cartItems.value.find(item => item.id === recipe.id)
-  if (existItem) {
-    existItem.quantity++
-  } else {
-    cartItems.value.push({
-      id: recipe.id,
-      name: recipe.name,
-      price: recipe.price,
-      quantity: 1
-    })
-  }
+  cartStore.addItem(recipe)
   ElMessage.success('已添加到购物车')
 }
 
-// 从购物车移除
-const removeFromCart = (index) => {
-  cartItems.value.splice(index, 1)
+const handleRemoveFromCart = (index) => {
+  cartStore.removeItem(index)
 }
 
-// 清空购物车
-const clearCart = () => {
-  cartItems.value = []
+const handleClearCart = () => {
+  cartStore.clear()
+  checkoutForm.value.payType = 1
 }
 
-// 更新购物车
-const updateCart = () => {
-  // 自动触发
+const handleQuantityChange = (index, quantity) => {
+  cartStore.updateQuantity(index, quantity)
 }
-
-// 计算总额
-const totalAmount = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
-})
 
 // 优惠金额（暂时写死）
 const discountAmount = ref(0)
@@ -243,9 +237,12 @@ const actualAmount = computed(() => {
   return totalAmount.value - discountAmount.value
 })
 
-// 结账
-const checkout = () => {
+const openCheckout = () => {
   checkoutDialogVisible.value = true
+}
+
+const goTo = (path) => {
+  router.push(path)
 }
 
 // 确认结账
@@ -256,10 +253,15 @@ const confirmCheckout = async () => {
   }
 
   try {
-    // 构建订单数据
+    const valid = await checkoutFormRef.value?.validate().catch(() => false)
+    if (!valid) {
+      return
+    }
+
+    checkoutSubmitting.value = true
     const orderData = {
-      orderType: 1,  // 堂食
-      payType: paymentMethod.value,
+      orderType: 1,
+      payType: checkoutForm.value.payType,
       totalAmount: totalAmount.value,
       discountAmount: discountAmount.value,
       actualAmount: actualAmount.value,
@@ -272,19 +274,20 @@ const confirmCheckout = async () => {
       }))
     }
 
-    // 调用后端API创建订单
-    const data = await request.post('/order', orderData)
+    const data = await createOrder(orderData)
 
     ElMessage.success('支付成功！订单号：' + data.data)
     checkoutDialogVisible.value = false
-    clearCart()
+    handleClearCart()
   } catch (error) {
     ElMessage.error('支付失败：' + (error.message || '未知错误'))
+  } finally {
+    checkoutSubmitting.value = false
   }
 }
 
-onMounted(() => {
-  loadRecipes()
+onBeforeUnmount(() => {
+  debouncedLoadRecipes.cancel()
 })
 </script>
 

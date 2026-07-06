@@ -18,7 +18,61 @@ docker/                Nginx config
 docker-compose.yml     Local deployment
 ```
 
-## Run
+## Run Without Docker
+
+Prerequisites:
+
+- Java 11+
+- Maven 3.8+
+- Node.js 20+
+- MySQL 8
+- Redis 6+
+
+Prepare local environment:
+
+```bash
+cp scripts/local.env.example scripts/local.env
+```
+
+Update `scripts/local.env` with your local MySQL, Redis, and JWT settings.
+
+Start backend in one terminal:
+
+```bash
+./scripts/start-backend-local.sh
+```
+
+Start frontend in another terminal:
+
+```bash
+./scripts/start-frontend-local.sh
+```
+
+Default local addresses:
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:8080`
+
+## Build Without Docker
+
+Build backend jar and frontend static files:
+
+```bash
+./scripts/build-release.sh
+```
+
+Run the packaged backend:
+
+```bash
+./scripts/start-backend-jar.sh
+```
+
+Artifacts:
+
+- Backend jar: `backend/target/cash-register-backend.jar`
+- Frontend dist: `frontend/dist`
+
+## Run With Docker
 
 ```bash
 cp .env.example .env
@@ -34,7 +88,7 @@ Prerequisites:
 
 - Java 11+
 - Maven 3.8+
-- Node.js 18+
+- Node.js 20+
 - Nginx
 - MySQL 8
 - Redis 6+

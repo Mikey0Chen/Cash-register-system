@@ -12,11 +12,14 @@ frontend/node_modules/
 data/
 logs/
 *.log
+backups/
+*.pid
 
 # Local environment files
 .env
 .env.*
 !.env.example
+scripts/local.env
 
 # Tool metadata
 .omc/

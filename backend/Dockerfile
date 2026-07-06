@@ -1,12 +1,9 @@
-FROM eclipse-temurin:11-jdk-alpine AS builder
+FROM maven:3.9.8-eclipse-temurin-11-alpine AS builder
 
 WORKDIR /app
 
 COPY pom.xml .
 COPY src ./src
-
-# 安装 Maven
-RUN apk add --no-cache maven
 
 # 构建项目
 RUN mvn clean package -DskipTests

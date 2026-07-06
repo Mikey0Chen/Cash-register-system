@@ -3,13 +3,13 @@
     <div class="page-header">
       <h2>配方管理</h2>
       <div>
-        <el-button @click="$router.push('/pos')">返回收银台</el-button>
+        <el-button @click="goTo('/pos')">返回收银台</el-button>
         <el-button type="primary" @click="handleCreate">新增配方</el-button>
       </div>
     </div>
 
     <div class="page-body">
-      <el-table :data="tableData" border stripe>
+      <el-table v-loading="tableLoading" :data="tableData" border stripe>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="鸡尾酒名称" width="150" />
         <el-table-column prop="nameEn" label="英文名" width="150" />
@@ -86,15 +86,15 @@
 
     <!-- 配方编辑/新增对话框 -->
     <el-dialog v-model="formDialogVisible" :title="formMode === 'create' ? '新增配方' : '编辑配方'" width="800px">
-      <el-form :model="recipeForm" label-width="100px">
+      <el-form ref="recipeFormRef" :model="recipeForm" :rules="recipeFormRules" label-width="100px">
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="中文名称" required>
+            <el-form-item label="中文名称" prop="name" required>
               <el-input v-model="recipeForm.name" placeholder="请输入中文名称" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="英文名称" required>
+            <el-form-item label="英文名称" prop="nameEn" required>
               <el-input v-model="recipeForm.nameEn" placeholder="请输入英文名称" />
             </el-form-item>
           </el-col>
@@ -102,7 +102,7 @@
 
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="分类" required>
+            <el-form-item label="分类" prop="category" required>
               <el-select v-model="recipeForm.category" placeholder="请选择分类" style="width: 100%">
                 <el-option label="经典鸡尾酒" value="经典鸡尾酒" />
                 <el-option label="创意鸡尾酒" value="创意鸡尾酒" />
@@ -112,7 +112,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="售价" required>
+            <el-form-item label="售价" prop="price" required>
               <el-input-number v-model="recipeForm.price" :min="0" :precision="2" style="width: 100%" />
             </el-form-item>
           </el-col>
@@ -137,7 +137,7 @@
                     type="warning"
                     size="small"
                     @click="handleEditIngredient(row.ingredientId)"
-                    icon="Edit"
+                    :icon="Edit"
                     circle
                     title="编辑原料"
                   />
@@ -165,17 +165,17 @@
 
       <template #footer>
         <el-button @click="formDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <el-button type="primary" :loading="recipeSubmitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
 
     <!-- 原料编辑/新增对话框 -->
     <el-dialog v-model="ingredientDialogVisible" :title="ingredientFormMode === 'create' ? '新增原料' : '编辑原料'" width="500px">
-      <el-form :model="ingredientForm" label-width="100px">
-        <el-form-item label="原料名称" required>
+      <el-form ref="ingredientFormRef" :model="ingredientForm" :rules="ingredientFormRules" label-width="100px">
+        <el-form-item label="原料名称" prop="name" required>
           <el-input v-model="ingredientForm.name" placeholder="请输入原料名称" />
         </el-form-item>
-        <el-form-item label="原料类型" required>
+        <el-form-item label="原料类型" prop="type" required>
           <el-select v-model="ingredientForm.type" placeholder="选择类型" style="width: 100%">
             <el-option label="基酒" value="基酒" />
             <el-option label="辅料" value="辅料" />
@@ -183,7 +183,7 @@
             <el-option label="工具" value="工具" />
           </el-select>
         </el-form-item>
-        <el-form-item label="单位" required>
+        <el-form-item label="单位" prop="unit" required>
           <el-input v-model="ingredientForm.unit" placeholder="如: ml, g, 个" />
         </el-form-item>
         <el-form-item label="单价">
@@ -198,7 +198,7 @@
       </el-form>
       <template #footer>
         <el-button @click="ingredientDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmitIngredient">确定</el-button>
+        <el-button type="primary" :loading="ingredientSubmitting" @click="handleSubmitIngredient">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -206,12 +206,22 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit } from '@element-plus/icons-vue'
 import { getRecipePage, getRecipeDetail, deleteRecipe, createRecipe, updateRecipe } from '@/api/recipe'
-import request from '@/utils/request'
+import {
+  getIngredientList,
+  getIngredientById,
+  createIngredient,
+  updateIngredient
+} from '@/api/ingredient'
 
+const router = useRouter()
 const tableData = ref([])
+const tableLoading = ref(false)
+const recipeSubmitting = ref(false)
+const ingredientSubmitting = ref(false)
 const pagination = ref({
   current: 1,
   size: 10,
@@ -222,6 +232,7 @@ const currentRecipe = ref(null)
 
 const formDialogVisible = ref(false)
 const formMode = ref('create')
+const recipeFormRef = ref()
 const recipeForm = ref({
   id: null,
   name: '',
@@ -231,11 +242,18 @@ const recipeForm = ref({
   description: '',
   ingredients: []
 })
+const recipeFormRules = {
+  name: [{ required: true, message: '请输入中文名称', trigger: 'blur' }],
+  nameEn: [{ required: true, message: '请输入英文名称', trigger: 'blur' }],
+  category: [{ required: true, message: '请选择分类', trigger: 'change' }],
+  price: [{ required: true, message: '请输入售价', trigger: 'blur' }]
+}
 const allIngredients = ref([])
 
 // 原料编辑相关
 const ingredientDialogVisible = ref(false)
 const ingredientFormMode = ref('create')
+const ingredientFormRef = ref()
 const ingredientForm = ref({
   id: null,
   name: '',
@@ -245,8 +263,38 @@ const ingredientForm = ref({
   spec: '',
   supplier: ''
 })
+const ingredientFormRules = {
+  name: [{ required: true, message: '请输入原料名称', trigger: 'blur' }],
+  type: [{ required: true, message: '请选择原料类型', trigger: 'change' }],
+  unit: [{ required: true, message: '请输入单位', trigger: 'blur' }]
+}
+
+function createEmptyRecipeForm() {
+  return {
+    id: null,
+    name: '',
+    nameEn: '',
+    category: '',
+    price: 0,
+    description: '',
+    ingredients: []
+  }
+}
+
+function createEmptyIngredientForm() {
+  return {
+    id: null,
+    name: '',
+    type: '',
+    unit: 'ml',
+    unitPrice: 0,
+    spec: '',
+    supplier: ''
+  }
+}
 
 const loadData = async () => {
+  tableLoading.value = true
   try {
     const res = await getRecipePage({
       current: pagination.value.current,
@@ -256,12 +304,14 @@ const loadData = async () => {
     pagination.value.total = res.data.total
   } catch (error) {
     ElMessage.error('加载数据失败')
+  } finally {
+    tableLoading.value = false
   }
 }
 
 const loadIngredients = async () => {
   try {
-    const data = await request.get('/ingredient/list')
+    const data = await getIngredientList()
     allIngredients.value = data.data
   } catch (error) {
     ElMessage.error('加载原料列表失败')
@@ -273,16 +323,9 @@ const loadAllIngredients = loadIngredients
 
 const handleCreate = () => {
   formMode.value = 'create'
-  recipeForm.value = {
-    id: null,
-    name: '',
-    nameEn: '',
-    category: '',
-    price: 0,
-    description: '',
-    ingredients: []
-  }
+  recipeForm.value = createEmptyRecipeForm()
   formDialogVisible.value = true
+  recipeFormRef.value?.clearValidate()
   loadIngredients()
 }
 
@@ -317,6 +360,7 @@ const handleEdit = async (row) => {
       }))
     }
     formDialogVisible.value = true
+    recipeFormRef.value?.clearValidate()
     loadIngredients()
   } catch (error) {
     ElMessage.error('获取配方详情失败')
@@ -361,8 +405,8 @@ const handleIngredientChange = (index) => {
 }
 
 const handleSubmit = async () => {
-  if (!recipeForm.value.name || !recipeForm.value.nameEn || !recipeForm.value.category) {
-    ElMessage.warning('请填写完整的配方信息')
+  const valid = await recipeFormRef.value?.validate().catch(() => false)
+  if (!valid) {
     return
   }
 
@@ -372,6 +416,7 @@ const handleSubmit = async () => {
   }
 
   try {
+    recipeSubmitting.value = true
     if (formMode.value === 'create') {
       await createRecipe(recipeForm.value)
       ElMessage.success('创建成功')
@@ -383,54 +428,57 @@ const handleSubmit = async () => {
     loadData()
   } catch (error) {
     ElMessage.error(formMode.value === 'create' ? '创建失败' : '更新失败')
+  } finally {
+    recipeSubmitting.value = false
   }
 }
 
 // 原料管理方法
 const handleCreateIngredient = () => {
   ingredientFormMode.value = 'create'
-  ingredientForm.value = {
-    id: null,
-    name: '',
-    type: '',
-    unit: 'ml',
-    unitPrice: 0,
-    spec: '',
-    supplier: ''
-  }
+  ingredientForm.value = createEmptyIngredientForm()
   ingredientDialogVisible.value = true
+  ingredientFormRef.value?.clearValidate()
 }
 
 const handleEditIngredient = async (ingredientId) => {
   try {
-    const data = await request.get(`/ingredient/${ingredientId}`)
+    const data = await getIngredientById(ingredientId)
     ingredientFormMode.value = 'edit'
     ingredientForm.value = { ...data.data }
     ingredientDialogVisible.value = true
+    ingredientFormRef.value?.clearValidate()
   } catch (error) {
     ElMessage.error('加载原料信息失败')
   }
 }
 
 const handleSubmitIngredient = async () => {
-  if (!ingredientForm.value.name || !ingredientForm.value.type || !ingredientForm.value.unit) {
-    ElMessage.warning('请填写完整的原料信息')
+  const valid = await ingredientFormRef.value?.validate().catch(() => false)
+  if (!valid) {
     return
   }
 
   try {
+    ingredientSubmitting.value = true
     if (ingredientFormMode.value === 'create') {
-      await request.post('/ingredient', ingredientForm.value)
+      await createIngredient(ingredientForm.value)
       ElMessage.success('原料创建成功')
     } else {
-      await request.put('/ingredient', ingredientForm.value)
+      await updateIngredient(ingredientForm.value)
       ElMessage.success('原料更新成功')
     }
     ingredientDialogVisible.value = false
     loadAllIngredients() // 重新加载原料列表
   } catch (error) {
     ElMessage.error(ingredientFormMode.value === 'create' ? '创建失败' : '更新失败')
+  } finally {
+    ingredientSubmitting.value = false
   }
+}
+
+const goTo = (path) => {
+  router.push(path)
 }
 
 onMounted(() => {

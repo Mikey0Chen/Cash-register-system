@@ -3,10 +3,10 @@
     <!-- 顶部导航 -->
     <div class="page-header">
       <h2>财务统计</h2>
-      <el-button @click="$router.push('/pos')">返回收银台</el-button>
+      <el-button @click="goTo('/pos')">返回收银台</el-button>
     </div>
 
-    <el-card class="summary-card">
+    <el-card v-loading="summaryLoading" class="summary-card">
       <template #header>
         <div class="card-header">
           <span>财务概览</span>
@@ -25,19 +25,19 @@
         <el-col :span="6">
           <div class="stat-item">
             <div class="stat-label">销售收入</div>
-            <div class="stat-value revenue">¥{{ summary.totalRevenue || '0.00' }}</div>
+            <div class="stat-value revenue">¥{{ formatCurrency(summary.totalRevenue) }}</div>
           </div>
         </el-col>
         <el-col :span="6">
           <div class="stat-item">
             <div class="stat-label">成本支出</div>
-            <div class="stat-value cost">¥{{ summary.totalCost || '0.00' }}</div>
+            <div class="stat-value cost">¥{{ formatCurrency(summary.totalCost) }}</div>
           </div>
         </el-col>
         <el-col :span="6">
           <div class="stat-item">
             <div class="stat-label">净利润</div>
-            <div class="stat-value profit">¥{{ summary.totalProfit || '0.00' }}</div>
+            <div class="stat-value profit">¥{{ formatCurrency(summary.totalProfit) }}</div>
           </div>
         </el-col>
         <el-col :span="6">
@@ -85,27 +85,27 @@
         </div>
       </template>
 
-      <el-table :data="orderList" stripe>
+      <el-table v-loading="orderListLoading" :data="orderList" stripe>
         <el-table-column prop="orderNo" label="订单号" width="180" />
         <el-table-column prop="payTime" label="支付时间" width="160">
           <template #default="{ row }">
-            {{ formatDateTime(row.payTime) }}
+            {{ formatDateTimeLabel(row.payTime) }}
           </template>
         </el-table-column>
         <el-table-column prop="actualAmount" label="销售金额" width="100" align="right">
           <template #default="{ row }">
-            ¥{{ row.actualAmount }}
+            ¥{{ formatCurrency(row.actualAmount) }}
           </template>
         </el-table-column>
         <el-table-column prop="totalCost" label="成本" width="100" align="right">
           <template #default="{ row }">
-            ¥{{ row.totalCost }}
+            ¥{{ formatCurrency(row.totalCost) }}
           </template>
         </el-table-column>
         <el-table-column prop="profit" label="利润" width="100" align="right">
           <template #default="{ row }">
             <span :class="row.profit >= 0 ? 'profit-positive' : 'profit-negative'">
-              ¥{{ row.profit }}
+              ¥{{ formatCurrency(row.profit) }}
             </span>
           </template>
         </el-table-column>
@@ -128,22 +128,31 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '@/utils/request'
+import { useRouter } from 'vue-router'
+import { getFinancialSummary, getFinancialOrderList } from '@/api/financial'
+import { PAYMENT_TYPE_LABELS } from '@/constants/pos'
 import { ElMessage } from 'element-plus'
 import { Refresh as RefreshIcon } from '@element-plus/icons-vue'
+import { formatCurrency, formatDateTime } from '@/utils/format'
 
+const router = useRouter()
 const activePeriod = ref('today')
 const summary = ref({})
 const dateRange = ref([])
 const orderList = ref([])
+const summaryLoading = ref(false)
+const orderListLoading = ref(false)
 
 // 加载汇总数据
 const loadSummary = async () => {
+  summaryLoading.value = true
   try {
-    const data = await request.get(`/financial/${activePeriod.value}`)
+    const data = await getFinancialSummary(activePeriod.value)
     summary.value = data.data
   } catch (error) {
     ElMessage.error('加载财务数据失败')
+  } finally {
+    summaryLoading.value = false
   }
 }
 
@@ -152,13 +161,14 @@ const loadOrderList = async () => {
   if (!dateRange.value || dateRange.value.length !== 2) return
 
   try {
+    orderListLoading.value = true
     const [startDate, endDate] = dateRange.value
-    const data = await request.get('/financial/orders', {
-      params: { startDate, endDate }
-    })
+    const data = await getFinancialOrderList({ startDate, endDate })
     orderList.value = data.data
   } catch (error) {
     ElMessage.error('加载订单明细失败')
+  } finally {
+    orderListLoading.value = false
   }
 }
 
@@ -169,22 +179,16 @@ const handleRefresh = () => {
   ElMessage.success('数据已刷新')
 }
 
-// 格式化日期时间
-const formatDateTime = (dateTime) => {
-  if (!dateTime) return ''
-  return new Date(dateTime).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+const getPayTypeName = (type) => {
+  return PAYMENT_TYPE_LABELS[type] || '-'
 }
 
-// 获取支付方式名称
-const getPayTypeName = (type) => {
-  const names = { 1: '现金', 2: '微信', 3: '支付宝', 4: '会员卡' }
-  return names[type] || '-'
+const formatDateTimeLabel = (dateTime) => {
+  return formatDateTime(dateTime)
+}
+
+const goTo = (path) => {
+  router.push(path)
 }
 
 onMounted(() => {
