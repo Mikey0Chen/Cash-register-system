@@ -18,5 +18,7 @@ if [[ ! -f "$JAR_PATH" ]]; then
   exit 1
 fi
 
+read -r -a JAVA_ARGS <<< "${JAVA_OPTS:--Xms128m -Xmx256m -XX:+UseG1GC}"
+
 cd "$ROOT_DIR/backend"
-exec java -jar "$JAR_PATH"
+exec java "${JAVA_ARGS[@]}" -jar "$JAR_PATH"

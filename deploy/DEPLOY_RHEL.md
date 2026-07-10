@@ -11,7 +11,6 @@ Project requirements:
 - Node.js 18+
 - Nginx
 - MySQL 8
-- Redis 6+
 
 The backend uses Spring Boot `2.7.18` and the project `pom.xml` targets Java 11.
 
@@ -71,10 +70,8 @@ Edit `/etc/cash-register-system/cash-register.env` and set:
 - `DB_URL`
 - `DB_USERNAME`
 - `DB_PASSWORD`
-- `REDIS_HOST`
-- `REDIS_PORT`
-- `REDIS_PASSWORD`
 - `JWT_SECRET`
+- `JAVA_OPTS`
 
 Example:
 
@@ -128,4 +125,6 @@ sudo nginx -t && sudo systemctl reload nginx
 
 - The frontend sends requests to `/api`, and Nginx removes that prefix before proxying to Spring Boot.
 - The backend listens on `127.0.0.1:8080` through the local host network path exposed by the service.
+- The backend no longer requires Redis. Existing Redis containers can remain running if other services need them.
+- The default `JAVA_OPTS` keeps the backend heap at `256m`; raise it if traffic or data volume grows.
 - Keep `/etc/cash-register-system/cash-register.env` out of Git.

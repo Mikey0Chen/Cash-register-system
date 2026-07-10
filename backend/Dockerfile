@@ -26,4 +26,4 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java ${JAVA_OPTS:--Xms128m -Xmx256m -XX:+UseG1GC} -jar app.jar"]

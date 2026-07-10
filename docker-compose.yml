@@ -22,20 +22,6 @@ services:
     networks:
       - cash-register-network
 
-  redis:
-    image: redis:7-alpine
-    container_name: cash-register-redis
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - ./data/redis:/data
-    command: sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"; else redis-server --appendonly yes; fi'
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-    networks:
-      - cash-register-network
-
   backend:
     build:
       context: ./backend
@@ -48,14 +34,13 @@ services:
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
       DB_USERNAME: ${MYSQL_USER}
       DB_PASSWORD: ${MYSQL_PASSWORD}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms128m -Xmx256m -XX:+UseG1GC}
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-5}
+      DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-0}
       TZ: Asia/Shanghai
     depends_on:
       - mysql
-      - redis
     networks:
       - cash-register-network
     healthcheck:

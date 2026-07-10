@@ -5,7 +5,7 @@
 ## Stack
 
 - Frontend: Vue 3, Vite, Element Plus
-- Backend: Spring Boot, MyBatis-Plus, MySQL, Redis
+- Backend: Spring Boot, MyBatis-Plus, MySQL
 - Deploy: Docker, Docker Compose, Nginx
 
 ## Structure
@@ -26,7 +26,6 @@ Prerequisites:
 - Maven 3.8+
 - Node.js 20+
 - MySQL 8
-- Redis 6+
 
 Prepare local environment:
 
@@ -34,12 +33,23 @@ Prepare local environment:
 cp scripts/local.env.example scripts/local.env
 ```
 
-Update `scripts/local.env` with your local MySQL, Redis, and JWT settings.
+Update `scripts/local.env` with your local MySQL and JWT settings.
 
 Start backend in one terminal:
 
 ```bash
 ./scripts/start-backend-local.sh
+```
+
+The backend local script defaults to fast jar mode:
+
+- It runs `backend/target/cash-register-backend.jar` directly with `java -jar`
+- It automatically rebuilds the jar when backend source files or `pom.xml` changed
+- It uses `JAVA_OPTS=-Xms128m -Xmx256m -XX:+UseG1GC` by default to keep memory usage low
+- Use Maven mode while actively developing backend code:
+
+```bash
+BACKEND_RUN_MODE=maven ./scripts/start-backend-local.sh
 ```
 
 Start frontend in another terminal:
@@ -91,7 +101,6 @@ Prerequisites:
 - Node.js 20+
 - Nginx
 - MySQL 8
-- Redis 6+
 
 Build after pulling code:
 
@@ -190,7 +199,7 @@ Backend service:
 
 - Copy `deploy/systemd/cash-register-backend.service` to `/etc/systemd/system/`
 - Copy `deploy/env/cash-register.env.example` to `/etc/cash-register-system/cash-register.env`
-- Fill in database, Redis, and JWT values
+- Fill in database, JWT, and optional JVM tuning values
 - Start with:
 
 ```bash
