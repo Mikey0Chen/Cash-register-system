@@ -153,14 +153,14 @@ Alternative: publish on the same server IP with a different Nginx port:
 
 - Keep the existing site unchanged
 - Create a separate vhost such as `/usr/local/nginx/conf/vhost/cash-register-system.conf`
-- Let the cash register system listen on `8083`
+- Let the cash register system listen on `8081`
 - Proxy `/api/` to `http://127.0.0.1:8080/`
 
 Example:
 
 ```nginx
 server {
-    listen 8083;
+    listen 8081;
     server_name 47.94.123.202 127.0.0.1 localhost cash-register-system.local;
     access_log /usr/local/nginx/logs/cash-register-system.log;
 
@@ -192,8 +192,8 @@ sudo /usr/local/nginx/sbin/nginx -s reload
 
 Access example:
 
-- Frontend: `http://47.94.123.202:8083/`
-- Backend health check: `http://47.94.123.202:8083/api/actuator/health`
+- Frontend: `http://47.94.123.202:8081/`
+- Backend health check: `http://47.94.123.202:8081/api/actuator/health`
 
 Backend service:
 
